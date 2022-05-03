@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #define BDY(I) game.bodies[(I)]
+#define G 6.674e-11
 
 enum state { QUIT = 0, RUNNING = 1 };
 
@@ -18,7 +19,6 @@ typedef struct {
 typedef struct {
 	body_t *bodies;
 	size_t nBodies;
-	double g;
 	char status;
 } game_t;
 

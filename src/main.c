@@ -3,7 +3,7 @@
 int
 main()
 {
-	char code = init(100);
+	char code = init(1.2e11);
 	newGame();
 	if (!code) {
 #ifdef RENDER_THREAD

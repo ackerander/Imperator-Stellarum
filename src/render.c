@@ -25,7 +25,7 @@ static void
 renderBody(size_t idx)
 {
 	filledCircleColor(renderer, SCREENX(BDY(idx).px), SCREENY(BDY(idx).py),
-		scale * BDY(idx).r, FG);
+		60 * scale * BDY(idx).r, FG);
 }
 
 static void
@@ -56,7 +56,7 @@ init(double zoom)
 		return RENDERER;
 	/* Scaling */
 	SDL_GetWindowSize(window, &screenW, &screenH);
-	scale = MIN(screenW, screenH) / zoom;
+	scale = 0.5 * MIN(screenW, screenH) / zoom;
 	/* Create Semaphore */
 	gLock = SDL_CreateSemaphore(1);
 	return SUCCESS;
@@ -77,7 +77,7 @@ loop:
 			game.status = QUIT;
 			return 0;
 		case SDL_MOUSEWHEEL:
-			scale += 0.1 * e.wheel.y;
+			scale += 5e-11 * e.wheel.y;
 		}
 	}
 	t2 = SDL_GetTicks();

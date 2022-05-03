@@ -3,7 +3,6 @@
 
 #define DISTSQ(A, B) ((BDY(A).px - BDY(B).px) * (BDY(A).px - BDY(B).px) +\
 (BDY(A).py - BDY(B).py) * (BDY(A).py - BDY(B).py))
-//#define CENTER
 
 game_t game;
 extern SDL_sem* gLock;
@@ -14,56 +13,54 @@ void
 newGame()
 {
 	tps = SDL_GetPerformanceFrequency();
-	game.g = 5e-7;
-#ifdef CENTER
-	game.bodies = malloc(3 * sizeof(body_t));
-	game.nBodies = 3;
+
+	game.bodies = malloc(5 * sizeof(body_t));
+	game.nBodies = 5;
 	
-	BDY(0).r = 3;
-	BDY(0).m = 100000;
-	BDY(0).px = 30;
+	/* Sun */
+	BDY(0).r = 695700000;
+	BDY(0).m = 1.9885e30;
+	BDY(0).px = 0;
 	BDY(0).py = 0;
 	BDY(0).vx = 0;
-	BDY(0).vy = 15;
+	BDY(0).vy = 0;
 
-	BDY(1).r = 3;
-	BDY(1).m = 100000;
-	BDY(1).px = 0;
+	/* Mercury */
+	BDY(1).r = 2439000;
+	BDY(1).m = 3.301e23;
+	BDY(1).px = 46001009000;
 	BDY(1).py = 0;
 	BDY(1).vx = 0;
-	BDY(1).vy = 0;
+	BDY(1).vy = 58976.66765397275;
+//	BDY(1).vy = 0;
 
-	BDY(2).r = 3;
-	BDY(2).m = 100000;
-	BDY(2).px = -30;
+	/* Venus */
+	BDY(2).r = 6050000;
+	BDY(2).m = 4.867e24;
+	BDY(2).px = 107476170000;
 	BDY(2).py = 0;
 	BDY(2).vx = 0;
-	BDY(2).vy = -15;
-#else
-	game.bodies = malloc(3 * sizeof(body_t));
-	game.nBodies = 3;
-	
-	BDY(0).r = 3;
-	BDY(0).m = 100000;
-	BDY(0).px = -26;
-	BDY(0).py = -15;
-	BDY(0).vx = 5;
-	BDY(0).vy = -5 * sqrt(3);
+	BDY(2).vy = 35258.70099654741;
+//	BDY(2).vy = 0;
 
-	BDY(1).r = 3;
-	BDY(1).m = 100000;
-	BDY(1).px = 26;
-	BDY(1).py = -15;
-	BDY(1).vx = 5;
-	BDY(1).vy = 5 * sqrt(3);
+	/* Earth */
+	BDY(3).r = 6378000;
+	BDY(3).m = 5.972e24;
+	BDY(3).px = 147098291000;
+	BDY(3).py = 0;
+	BDY(3).vx = 0;
+	BDY(3).vy = 30286.620365400406;
+//	BDY(3).vy = 0;
 
-	BDY(2).r = 3;
-	BDY(2).m = 100000;
-	BDY(2).px = 0;
-	BDY(2).py = 30;
-	BDY(2).vx = -10;
-	BDY(2).vy = 0;
-#endif
+	/* Mars */
+	BDY(4).r = 3397000;
+	BDY(4).m = 6.417e23;
+	BDY(4).px = 206655215000;
+	BDY(4).py = 0;
+	BDY(4).vx = 0;
+	BDY(4).vy = 26498.48200829731;
+//	BDY(4).vy = 0;
+
 	game.status = RUNNING;
 }
 
@@ -86,7 +83,7 @@ update(const double dt)
 			ax += a * (BDY(j).px - BDY(i).px);
 			ay += a * (BDY(j).py - BDY(i).py);
 		}
-		a = game.g * BDY(i).m * dt;
+		a = G * dt;
 		BDY(i).vx += a * ax;
 		BDY(i).vy += a * ay;
 	/* Add collision logic */
@@ -106,7 +103,7 @@ physicsLoop(void *p)
 
 	while (game.status) {
 		newT = SDL_GetPerformanceCounter();
-		update((double)(newT - time) / tps);
+		update(50000 * (double)(newT - time) / tps);
 		time = newT;
 	}
 	return 0;
