@@ -1,21 +1,23 @@
 #include "game.h"
 #include <math.h>
 
-#define DISTSQ(A, B) ((BDY(A).px - BDY(B).px) * (BDY(A).px - BDY(B).px) +\
-(BDY(A).py - BDY(B).py) * (BDY(A).py - BDY(B).py))
-
 game_t game;
-extern SDL_sem* gLock;
+extern SDL_sem *gLock;
 static Uint64 tps;
 static SDL_Thread *physicsThread = 0;
+static double *sum;
+static double *k;
+static double *ks;
 
 void
 newGame()
 {
-	tps = SDL_GetPerformanceFrequency();
-
-	game.bodies = malloc(5 * sizeof(body_t));
 	game.nBodies = 5;
+	game.bodies = malloc(game.nBodies * sizeof(body_t));
+	sum = malloc(4 * game.nBodies * sizeof(double));
+	k = malloc(4 * game.nBodies * sizeof(double));
+	ks = malloc(4 * game.nBodies * sizeof(double));
+	tps = SDL_GetPerformanceFrequency();
 	
 	/* Sun */
 	BDY(0).r = 695700000;
@@ -32,7 +34,6 @@ newGame()
 	BDY(1).py = 0;
 	BDY(1).vx = 0;
 	BDY(1).vy = 58976.66765397275;
-//	BDY(1).vy = 0;
 
 	/* Venus */
 	BDY(2).r = 6050000;
@@ -41,7 +42,6 @@ newGame()
 	BDY(2).py = 0;
 	BDY(2).vx = 0;
 	BDY(2).vy = 35258.70099654741;
-//	BDY(2).vy = 0;
 
 	/* Earth */
 	BDY(3).r = 6378000;
@@ -50,7 +50,6 @@ newGame()
 	BDY(3).py = 0;
 	BDY(3).vx = 0;
 	BDY(3).vy = 30286.620365400406;
-//	BDY(3).vy = 0;
 
 	/* Mars */
 	BDY(4).r = 3397000;
@@ -59,39 +58,76 @@ newGame()
 	BDY(4).py = 0;
 	BDY(4).vx = 0;
 	BDY(4).vy = 26498.48200829731;
-//	BDY(4).vy = 0;
 
 	game.status = RUNNING;
 }
 
 static void
-update(const double dt)
+accel(const double f1, const double f2)
 {
-	double ax, ay, d, a;
+	double d, dx, dy, a;
 
 	for (size_t i = 0; i < game.nBodies; ++i) {
-		ax = ay = 0;
+		ks[4*i] += f2 * (k[4*i] = f1 * sum[4*i + 2]);
+		ks[4*i + 1] += f2 * (k[4*i + 1] = f1 * sum[4*i + 3]);
+		k[4*i + 2] = k[4*i + 3] = 0;
 		for (size_t j = 0; j < i; ++j) {
-			d = DISTSQ(i, j);
+			dx = sum[4*j] - sum[4*i];
+			dy = sum[4*j + 1] - sum[4*i + 1];
+			d = dx * dx + dy * dy;
 			a = BDY(j).m / (d * sqrt(d));
-			ax += a * (BDY(j).px - BDY(i).px);
-			ay += a * (BDY(j).py - BDY(i).py);
+			k[4*i + 2] += a * dx;
+			k[4*i + 3] += a * dy;
 		}
 		for (size_t j = i + 1; j < game.nBodies; ++j) {
-			d = DISTSQ(i, j);
+			dx = sum[4*j] - sum[4*i];
+			dy = sum[4*j + 1] - sum[4*i + 1];
+			d = dx * dx + dy * dy;
 			a = BDY(j).m / (d * sqrt(d));
-			ax += a * (BDY(j).px - BDY(i).px);
-			ay += a * (BDY(j).py - BDY(i).py);
+			k[4*i + 2] += a * dx;
+			k[4*i + 3] += a * dy;
 		}
-		a = G * dt;
-		BDY(i).vx += a * ax;
-		BDY(i).vy += a * ay;
-	/* Add collision logic */
+		k[4*i + 2] *= f1 * G;
+		k[4*i + 3] *= f1 * G;
+		ks[4*i + 2] += f2 * k[4*i + 2];
+		ks[4*i + 3] += f2 * k[4*i + 3];
 	}
+}
+
+static void
+sumk()
+{
+	for (size_t i = 0; i < game.nBodies; ++i) {
+		sum[4 * i] = BDY(i).px + k[4 * i];
+		sum[4 * i + 1] = BDY(i).py + k[4 * i + 1];
+		sum[4 * i + 2] = BDY(i).vx + k[4 * i + 2];
+		sum[4 * i + 3] = BDY(i).vy + k[4 * i + 3];
+	}
+}
+
+static void
+updaterk(const double dt)
+{
+	for (size_t i = 0; i < game.nBodies; ++i) {
+		sum[4 * i] = BDY(i).px;
+		sum[4 * i + 1] = BDY(i).py;
+		sum[4 * i + 2] = BDY(i).vx;
+		sum[4 * i + 3] = BDY(i).vy;
+	}
+	memset(ks, 0, 4 * game.nBodies * sizeof(double));
+	accel(0.5 * dt, 1.0 / 3);
+	sumk();
+	accel(0.5 * dt, 2.0 / 3);
+	sumk();
+	accel(dt, 1.0 / 3);
+	sumk();
+	accel(dt, 1.0 / 6);
 	SDL_SemWait(gLock);
 	for (size_t i = 0; i < game.nBodies; ++i) {
-		BDY(i).px += BDY(i).vx * dt;
-		BDY(i).py += BDY(i).vy * dt;
+		BDY(i).px += ks[4*i];
+		BDY(i).py += ks[4*i + 1];
+		BDY(i).vx += ks[4*i + 2];
+		BDY(i).vy += ks[4*i + 3];
 	}
 	SDL_SemPost(gLock);
 }
@@ -103,7 +139,7 @@ physicsLoop(void *p)
 
 	while (game.status) {
 		newT = SDL_GetPerformanceCounter();
-		update(50000 * (double)(newT - time) / tps);
+		updaterk(50000 * (double)(newT - time) / tps);
 		time = newT;
 	}
 	return 0;
@@ -123,4 +159,7 @@ quitGame()
 		physicsThread = 0;
 	}
 	free(game.bodies);
+	free(sum);
+	free(k);
+	free(ks);
 }

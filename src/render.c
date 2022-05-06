@@ -6,8 +6,8 @@
 #define BG 0, 0, 0, 0xFF
 #define FG 0xFFFFFFFF
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-#define SCREENX(X) ((int)(scale * (X)) + screenW / 2)
-#define SCREENY(Y) ((int)(-scale * (Y)) + screenH / 2)
+#define SCREENX(X) ((int)(scale * (X) + centerX))
+#define SCREENY(Y) ((int)(-scale * (Y) + centerY))
 
 extern game_t game;
 SDL_sem* gLock;
@@ -17,6 +17,8 @@ enum codes { SUCCESS = 0, INIT_SDL, RENDERER, WINDOW };
 static SDL_Renderer *renderer;
 static SDL_Window *window;
 static double scale;
+static double centerX;
+static double centerY;
 static int screenW;
 static int screenH;
 static SDL_Thread *ioThread = 0;
@@ -57,6 +59,8 @@ init(double zoom)
 	/* Scaling */
 	SDL_GetWindowSize(window, &screenW, &screenH);
 	scale = 0.5 * MIN(screenW, screenH) / zoom;
+	centerX = screenW / 2;
+	centerY = screenH / 2;
 	/* Create Semaphore */
 	gLock = SDL_CreateSemaphore(1);
 	return SUCCESS;
@@ -78,6 +82,22 @@ loop:
 			return 0;
 		case SDL_MOUSEWHEEL:
 			scale += 5e-11 * e.wheel.y;
+			break;
+		case SDL_KEYDOWN:
+			switch(e.key.keysym.sym) {
+			case SDLK_w:
+				centerY += 10;
+				break;
+			case SDLK_s:
+				centerY -= 10;
+				break;
+			case SDLK_a:
+				centerX += 10;
+				break;
+			case SDLK_d:
+				centerX -= 10;
+				break;
+			}
 		}
 	}
 	t2 = SDL_GetTicks();
