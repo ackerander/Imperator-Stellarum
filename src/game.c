@@ -3,6 +3,7 @@
 
 game_t game;
 extern SDL_sem *gLock;
+double timeW = 1;
 static Uint64 tps;
 static SDL_Thread *physicsThread = 0;
 static double *sum;
@@ -139,7 +140,8 @@ physicsLoop(void *p)
 
 	while (game.status) {
 		newT = SDL_GetPerformanceCounter();
-		updaterk(50000 * (double)(newT - time) / tps);
+//		updaterk(50000 * (double)(newT - time) / tps);
+		updaterk(timeW * (newT - time) / tps);
 		time = newT;
 	}
 	return 0;
