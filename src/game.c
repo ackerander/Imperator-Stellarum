@@ -20,7 +20,7 @@ newGame()
 	ks = malloc(4 * game.nBodies * sizeof(double));
 	tps = SDL_GetPerformanceFrequency();
 	
-	/* Sun */
+	BDY(0).name = "Sol";
 	BDY(0).r = 695700000;
 	BDY(0).m = 1.9885e30;
 	BDY(0).px = 0;
@@ -28,7 +28,7 @@ newGame()
 	BDY(0).vx = 0;
 	BDY(0).vy = 0;
 
-	/* Mercury */
+	BDY(1).name = "Mercury";
 	BDY(1).r = 2439000;
 	BDY(1).m = 3.301e23;
 	BDY(1).px = 46001009000;
@@ -36,7 +36,7 @@ newGame()
 	BDY(1).vx = 0;
 	BDY(1).vy = 58976.66765397275;
 
-	/* Venus */
+	BDY(2).name = "Venus";
 	BDY(2).r = 6050000;
 	BDY(2).m = 4.867e24;
 	BDY(2).px = 107476170000;
@@ -44,7 +44,7 @@ newGame()
 	BDY(2).vx = 0;
 	BDY(2).vy = 35258.70099654741;
 
-	/* Earth */
+	BDY(3).name = "Terra";
 	BDY(3).r = 6378000;
 	BDY(3).m = 5.972e24;
 	BDY(3).px = 147098291000;
@@ -52,7 +52,7 @@ newGame()
 	BDY(3).vx = 0;
 	BDY(3).vy = 30286.620365400406;
 
-	/* Mars */
+	BDY(4).name = "Mars";
 	BDY(4).r = 3397000;
 	BDY(4).m = 6.417e23;
 	BDY(4).px = 206655215000;

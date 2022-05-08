@@ -3,8 +3,9 @@
 int
 main()
 {
-	char code = init(1.2e11);
+	uint8_t code;
 	newGame();
+	code = init(1.2e11);
 	if (!code) {
 #ifdef RENDER_THREAD
 		threadIO();

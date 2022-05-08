@@ -1,4 +1,4 @@
-LIBS = -lm -lSDL2 -lSDL2_gfx
+LIBS = -lm -lSDL2 -lSDL2_gfx -lSDL2_ttf
 CFLAGS = -std=c99 -Wall -Wextra -pedantic -O3 -march=native -mtune=native
 DEST = game
 CC = cc
