@@ -13,7 +13,7 @@ static double *ks;
 void
 newGame()
 {
-	game.nBodies = 5;
+	game.nBodies = 11;
 	game.bodies = malloc(game.nBodies * sizeof(body_t));
 	sum = malloc(4 * game.nBodies * sizeof(double));
 	k = malloc(4 * game.nBodies * sizeof(double));
@@ -52,13 +52,61 @@ newGame()
 	BDY(3).vx = 0;
 	BDY(3).vy = 30286.620365400406;
 
-	BDY(4).name = "Mars";
-	BDY(4).r = 3397000;
-	BDY(4).m = 6.417e23;
-	BDY(4).px = 206655215000;
+	BDY(4).name = "Luna";
+	BDY(4).r = 1737400;
+	BDY(4).m = 7.342e22;
+	BDY(4).px = BDY(3).px + 362600000;
 	BDY(4).py = 0;
 	BDY(4).vx = 0;
-	BDY(4).vy = 26498.48200829731;
+	BDY(4).vy = BDY(3).vy + 1077.286575649856;
+
+	BDY(5).name = "Mars";
+	BDY(5).r = 3397000;
+	BDY(5).m = 6.417e23;
+	BDY(5).px = 206655215000;
+	BDY(5).py = 0;
+	BDY(5).vx = 0;
+	BDY(5).vy = 26498.48200829731;
+
+	BDY(6).name = "Jupiter";
+	BDY(6).r = 69911000;
+	BDY(6).m = 1.8982e27;
+	BDY(6).px = 740679835000;
+	BDY(6).py = 0;
+	BDY(6).vx = 0;
+	BDY(6).vy = 13705.699722207082;
+
+	BDY(7).name = "Io";
+	BDY(7).r = 1821600;
+	BDY(7).m = 8.931938e22;
+	BDY(7).px = BDY(6).px + 420000000;
+	BDY(7).py = 0;
+	BDY(7).vx = 0;
+	BDY(7).vy = BDY(6).vy + 17402.602881771745;
+
+	BDY(8).name = "Europa";
+	BDY(8).r = 1560800;
+	BDY(8).m = 4.799844e22;
+	BDY(8).px = BDY(6).px + 664862000;
+	BDY(8).py = 0;
+	BDY(8).vx = 0;
+	BDY(8).vy = BDY(6).vy + 13865.80294814375;
+
+	BDY(9).name = "Ganymede";
+	BDY(9).r = 2634100;
+	BDY(9).m = 1.4819e23;
+	BDY(9).px = BDY(6).px + 1069200000;
+	BDY(9).py = 0;
+	BDY(9).vx = 0;
+	BDY(9).vy = BDY(6).vy + 10891.283327890113;
+
+	BDY(10).name = "Callisto";
+	BDY(10).r = 2410300;
+	BDY(10).m = 1.075938e23;
+	BDY(10).px = BDY(6).px + 1869000000;
+	BDY(10).py = 0;
+	BDY(10).vx = 0;
+	BDY(10).vy = BDY(6).vy + 8263.596129162883;
 
 	game.status = RUNNING;
 }

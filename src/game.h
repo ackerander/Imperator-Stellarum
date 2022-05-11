@@ -31,7 +31,7 @@ int physicsLoop(void *p);
 void threadPhysics();
 void quitGame();
 
-char init(double zoom);
+char init(double zoom, size_t lock);
 int ioLoop(void *);
 void threadIO();
 void quit(char code);

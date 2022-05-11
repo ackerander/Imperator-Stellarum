@@ -5,7 +5,7 @@ main()
 {
 	uint8_t code;
 	newGame();
-	code = init(1.2e11);
+	code = init(1.2e11, -1);
 	if (!code) {
 #ifdef RENDER_THREAD
 		threadIO();

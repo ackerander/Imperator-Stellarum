@@ -16,8 +16,8 @@
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
 #define CLAMP(X) MAX(MIN((X), 1), 0)
-#define SCREENX(X) ((int)(scale * (X) + centerX))
-#define SCREENY(Y) ((int)(-scale * (Y) + centerY))
+#define SCREENX(X) (int)(scale * ((X) - centerX) + screenW / 2)
+#define SCREENY(Y) (int)(scale * (centerY - (Y)) + screenH / 2)
 
 extern game_t game;
 extern double timeW;
@@ -34,24 +34,26 @@ static SDL_Renderer *renderer;
 static SDL_Window *window;
 static TTF_Font *font;
 static SDL_Tex *textTex;
-static double scale;
-static double centerX;
-static double centerY;
-static int screenW;
-static int screenH;
+static double scale, centerX, centerY;
+static int screenW, screenH;
 static unsigned int inflat = 1;
 static SDL_Thread *ioThread = 0;
 static SDL_Rect sliders[2 * SLIDERS];
 static double slVals[SLIDERS] = {0};
 static int slideH;
 static int8_t *selBitMask;
+static size_t camLock;
 
 static void
 renderBody(size_t idx)
 {
 	SDL_Point verts[3];
-	double screenR = inflat * scale * BDY(idx).r;
+	SDL_Rect textRec;
+	int x = SCREENX(BDY(idx).px), y = SCREENY(BDY(idx).py),
+	    screenR = inflat * scale * BDY(idx).r;
 
+	if (x < -screenR || x - screenR > screenW || y < screenR || y - screenR > screenH)
+		return;
 	filledCircleColor(renderer, SCREENX(BDY(idx).px), SCREENY(BDY(idx).py),
 		screenR, FG);
 	if ((selBitMask[idx / 8] >> (idx % 8)) & 1) {
@@ -59,20 +61,29 @@ renderBody(size_t idx)
 		verts[0].y = SCREENY(BDY(idx).py) - (screenR + screenW / 512) * TRIG45;
 		verts[1].x = verts[0].x + screenW / 128;
 		verts[1].y = verts[0].y - screenW / 128;
-		verts[2].x = verts[1].x + screenW / 32;
+		textRec.x = verts[1].x;
+		textRec.y = verts[1].y;
+		textRec.h = screenW / 128;
+		textRec.w = textTex[idx].w * textRec.h / textTex[idx].h;
+		verts[2].x = verts[1].x + textRec.w;
 		verts[2].y = verts[1].y;
 		SDL_RenderDrawLines(renderer, verts, 3);
+		SDL_RenderCopy(renderer, textTex[idx].texture, 0, &textRec);
 	}
 }
 
 static void
 renderScene()
 {
-	SDL_Rect drawRect = { .x = 59 * screenW / 64, .y = screenH / 64 };
+	SDL_Rect drawRect = { .x = 173 * screenW / 192, .y = screenH / 64 };
 	
 	SDL_SetRenderDrawColor(renderer, BG);
 	SDL_RenderClear(renderer);
 	SDL_SemWait(gLock);
+	if (camLock != (size_t)(-1)) {
+		centerX = BDY(camLock).px;
+		centerY = BDY(camLock).py;
+	}
 	for (size_t i = 0; i < game.nBodies; ++i)
 		renderBody(i);
 	SDL_SemPost(gLock);
@@ -81,7 +92,7 @@ renderScene()
 	SDL_RenderDrawRects(renderer, &sliders[SLIDERS], SLIDERS);
 
 	for (size_t i = 0; i < game.nBodies; ++i) {
-		drawRect.w = screenW / 16;
+		drawRect.w = screenW / 12;
 		drawRect.h = screenH / 32;
 		if ((selBitMask[i / 8] >> (i % 8)) & 1)
 			SDL_RenderFillRect(renderer, &drawRect);
@@ -89,17 +100,17 @@ renderScene()
 			SDL_RenderDrawRect(renderer, &drawRect);
 		drawRect.w = textTex[i].w;
 		drawRect.h = textTex[i].h;
-		drawRect.x += screenW / 32 - drawRect.w / 2;
+		drawRect.x += screenW / 24 - drawRect.w / 2;
 		drawRect.y += screenH / 64 - drawRect.h / 2;
 		SDL_RenderCopy(renderer, textTex[i].texture, 0, &drawRect);
-		drawRect.x -= screenW / 32 - drawRect.w / 2;
+		drawRect.x -= screenW / 24 - drawRect.w / 2;
 		drawRect.y += 3 * screenH / 128 + drawRect.h / 2;
 	}
 	SDL_RenderPresent(renderer);
 }
 
 char
-init(double zoom)
+init(double zoom, size_t lock)
 {
 	SDL_Surface *textSurface = 0;
 
@@ -119,11 +130,11 @@ init(double zoom)
 		return INIT_TTF;
 	if (!((font = TTF_OpenFont(RELFONT, PT)) || (font = TTF_OpenFont(ABSPATH RELFONT, PT))))
 		return LOAD_TTF;
-	/* Scaling */
+	/* Camera */
+	camLock = lock;
 	SDL_GetWindowSize(window, &screenW, &screenH);
 	scale = 0.5 * MIN(screenW, screenH) / zoom;
-	centerX = screenW / 2;
-	centerY = screenH / 2;
+	centerX = centerY = 0;
 	/* Create Semaphore */
 	gLock = SDL_CreateSemaphore(1);
 	/* UI */
@@ -152,6 +163,7 @@ ioLoop(void *p)
 {
 	SDL_Event e;
 	Uint32 t1, t2;
+	const Uint8* keyStates;
 	int x, y;
 
 loop:
@@ -166,8 +178,17 @@ loop:
 			SDL_GetMouseState(&x, &y);
 			y = 128 * (y - screenH / 64) / (5 * screenH);
 			if (x >= 59 * screenW / 64 && x <= screenW - screenW / 64 &&
-				y >= 0 && y < game.nBodies)
-				selBitMask[y / 8] ^= 1 << (y % 8);
+				y >= 0 && y < game.nBodies) {
+				switch (e.button.button) {
+				case SDL_BUTTON_LEFT:
+					selBitMask[y / 8] ^= 1 << (y % 8);
+					break;
+				case SDL_BUTTON_MIDDLE:
+					camLock = y;
+					break;
+				}
+			} else if (e.button.button == SDL_BUTTON_MIDDLE)
+				camLock = (size_t)(-1);
 			break;
 		case SDL_MOUSEWHEEL:
 			SDL_GetMouseState(&x, &y);
@@ -188,30 +209,25 @@ loop:
 				sliders[1].y = 63 * screenH / 64 -
 					(sliders[1].h = slideH * slVals[1]);
 			} else {
-				scale += 5e-11 * e.wheel.y;
+				scale += 5e-2 * scale * e.wheel.y;
 			}
 			break;
-		case SDL_KEYDOWN:
-			switch(e.key.keysym.sym) {
-			case SDLK_w:
-				centerY += 10;
-				break;
-			case SDLK_s:
-				centerY -= 10;
-				break;
-			case SDLK_a:
-				centerX += 10;
-				break;
-			case SDLK_d:
-				centerX -= 10;
-				break;
-			}
 		}
 	}
+	/* Key presses */
+	keyStates = SDL_GetKeyboardState(0);
+	if (keyStates[SDL_SCANCODE_W])
+		centerY += 10 / scale;
+	if (keyStates[SDL_SCANCODE_S])
+		centerY -= 10 / scale;
+	if (keyStates[SDL_SCANCODE_A])
+		centerX -= 10 / scale;
+	if (keyStates[SDL_SCANCODE_D])
+		centerX += 10 / scale;
 	t2 = SDL_GetTicks();
 	t1 = t2 - t1;
-	if (t1 < 25)
-		SDL_Delay(25 - t1);
+	if (t1 < 20)
+		SDL_Delay(20 - t1);
 	t1 = t2;
 	goto loop;
 }
